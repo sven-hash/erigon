@@ -459,16 +459,16 @@ func buildIdxFilter(ctx context.Context, d *compress.Decompressor, compressed Fi
 func (ii *InvertedIndex) BuildMissedIndices(ctx context.Context, g *errgroup.Group, ps *background.ProgressSet) {
 	for _, item := range ii.missedIdxFiles() {
 		item := item
-		fmt.Printf("buildMissedIndices (%s): %s %d-%d\n", item.decompressor.FileName(), ii.filenameBase, item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep)
 		g.Go(func() error {
+			fmt.Printf("buildMissedIndices (%s): %s %d-%d\n", item.decompressor.FileName(), ii.filenameBase, item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep)
 			return ii.buildEfi(ctx, item, ps)
 		})
 	}
 
 	for _, item := range ii.missedExistenceFilterFiles() {
 		item := item
-		fmt.Printf("buildMissedExistenceIndices (%s): %s %d-%d\n", item.decompressor.FileName(), ii.filenameBase, item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep)
 		g.Go(func() error {
+			fmt.Printf("buildMissedExistenceIndices (%s): %s %d-%d\n", item.decompressor.FileName(), ii.filenameBase, item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep)
 			return ii.buildExistenceFilter(ctx, item, ps)
 		})
 	}
