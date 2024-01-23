@@ -417,14 +417,21 @@ func (ii *InvertedIndex) buildExistenceFilter(ctx context.Context, item *filesIt
 }
 
 func buildIdxFilter(ctx context.Context, d *compress.Decompressor, compressed FileCompression, idxPath string, salt *uint32, ps *background.ProgressSet, logger log.Logger, noFsync bool) error {
-	g := NewArchiveGetter(d.MakeGetter(), compressed)
-	_, fileName := filepath.Split(idxPath)
+	fileName := filepath.Base(idxPath)
 	count := d.Count() / 2
 
 	p := ps.AddNew(fileName, uint64(count))
 	defer ps.Delete(p)
 	defer d.EnableReadAhead().DisableReadAhead()
 
+	g := NewArchiveGetter(d.MakeGetter(), compressed)
+
+	var ij uint64
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Printf("buildIndexFilter: %s %v count %d ij %d\n", idxPath, err, count, ij)
+		}
+	}()
 	idxFilter, err := NewExistenceFilter(uint64(count), idxPath)
 	if err != nil {
 		return err
@@ -437,12 +444,17 @@ func buildIdxFilter(ctx context.Context, d *compress.Decompressor, compressed Fi
 	key := make([]byte, 0, 256)
 	g.Reset(0)
 	for g.HasNext() {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+
 		key, _ = g.Next(key[:0])
 		hasher.Reset()
 		hasher.Write(key) //nolint:errcheck
 		hi, _ := hasher.Sum128()
 		idxFilter.AddHash(hi)
 
+		ij++
 		// Skip value
 		g.Skip()
 

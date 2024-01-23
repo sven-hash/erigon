@@ -1428,6 +1428,7 @@ func buildIndexThenOpen(ctx context.Context, d *compress.Decompressor, compresse
 	}
 	return recsplit.OpenIndex(idxPath)
 }
+
 func buildIndexFilterThenOpen(ctx context.Context, d *compress.Decompressor, compressed FileCompression, idxPath, tmpdir string, salt *uint32, ps *background.ProgressSet, logger log.Logger, noFsync bool) (*ExistenceFilter, error) {
 	if err := buildIdxFilter(ctx, d, compressed, idxPath, salt, ps, logger, noFsync); err != nil {
 		return nil, err
@@ -1437,21 +1438,25 @@ func buildIndexFilterThenOpen(ctx context.Context, d *compress.Decompressor, com
 	}
 	return OpenExistenceFilter(idxPath)
 }
+
 func buildIndex(ctx context.Context, d *compress.Decompressor, compressed FileCompression, idxPath, tmpdir string, values bool, salt *uint32, ps *background.ProgressSet, logger log.Logger, noFsync bool) error {
-	_, fileName := filepath.Split(idxPath)
 	count := d.Count()
 	if !values {
 		count = d.Count() / 2
 	}
-	p := ps.AddNew(fileName, uint64(count))
+	p := ps.AddNew(filepath.Base(idxPath), uint64(count))
 	defer ps.Delete(p)
 
 	defer d.EnableReadAhead().DisableReadAhead()
 
-	g := NewArchiveGetter(d.MakeGetter(), compressed)
-	var rs *recsplit.RecSplit
-	var err error
-	if rs, err = recsplit.NewRecSplit(recsplit.RecSplitArgs{
+	var ij, retry uint64
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Printf("buildIndex: %s %v ij %d KCount %d retries %d\n", idxPath, err, ij, count, retry)
+		}
+	}()
+
+	rs, err := recsplit.NewRecSplit(recsplit.RecSplitArgs{
 		KeyCount:    count,
 		Enums:       false,
 		BucketSize:  2000,
@@ -1460,15 +1465,18 @@ func buildIndex(ctx context.Context, d *compress.Decompressor, compressed FileCo
 		IndexFile:   idxPath,
 		Salt:        salt,
 		EtlBufLimit: etl.BufferOptimalSize / 2,
-	}, logger); err != nil {
+	}, logger)
+	if err != nil {
 		return fmt.Errorf("create recsplit: %w", err)
 	}
 	defer rs.Close()
+
 	rs.LogLvl(log.LvlTrace)
 	if noFsync {
 		rs.DisableFsync()
 	}
 
+	g := NewArchiveGetter(d.MakeGetter(), compressed)
 	word := make([]byte, 0, 256)
 	var keyPos, valPos uint64
 	for {
@@ -1487,6 +1495,7 @@ func buildIndex(ctx context.Context, d *compress.Decompressor, compressed FileCo
 					return fmt.Errorf("add idx key [%x]: %w", word, err)
 				}
 			}
+			ij++
 
 			// Skip value
 			keyPos, _ = g.Skip()
@@ -1497,6 +1506,8 @@ func buildIndex(ctx context.Context, d *compress.Decompressor, compressed FileCo
 			if rs.Collision() {
 				logger.Info("Building recsplit. Collision happened. It's ok. Restarting...")
 				rs.ResetNextSalt()
+				ij = 0
+				retry++
 			} else {
 				return fmt.Errorf("build idx: %w", err)
 			}
