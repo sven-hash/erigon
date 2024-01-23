@@ -467,6 +467,7 @@ func (ii *InvertedIndex) BuildMissedIndices(ctx context.Context, g *errgroup.Gro
 
 	for _, item := range ii.missedExistenceFilterFiles() {
 		item := item
+		fmt.Printf("buildMissedExistenceIndices (%s): %s %d-%d\n", item.decompressor.FileName(), ii.filenameBase, item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep
 		g.Go(func() error {
 			return ii.buildExistenceFilter(ctx, item, ps)
 		})
