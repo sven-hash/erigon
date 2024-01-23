@@ -417,7 +417,7 @@ func (ii *InvertedIndex) buildExistenceFilter(ctx context.Context, item *filesIt
 }
 
 func buildIdxFilter(ctx context.Context, d *compress.Decompressor, compressed FileCompression, idxPath string, salt *uint32, ps *background.ProgressSet, logger log.Logger, noFsync bool) error {
-	fileName := filepath.Base(idxPath)
+	_, fileName := filepath.Split(idxPath)
 	count := d.Count() / 2
 
 	p := ps.AddNew(fileName, uint64(count))
@@ -472,7 +472,6 @@ func (ii *InvertedIndex) BuildMissedIndices(ctx context.Context, g *errgroup.Gro
 	for _, item := range ii.missedIdxFiles() {
 		item := item
 		g.Go(func() error {
-			fmt.Printf("buildMissedIndices (%s): %s %d-%d\n", item.decompressor.FileName(), ii.filenameBase, item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep)
 			return ii.buildEfi(ctx, item, ps)
 		})
 	}
@@ -480,7 +479,6 @@ func (ii *InvertedIndex) BuildMissedIndices(ctx context.Context, g *errgroup.Gro
 	for _, item := range ii.missedExistenceFilterFiles() {
 		item := item
 		g.Go(func() error {
-			fmt.Printf("buildMissedExistenceIndices (%s): %s %d-%d\n", item.decompressor.FileName(), ii.filenameBase, item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep)
 			return ii.buildExistenceFilter(ctx, item, ps)
 		})
 	}

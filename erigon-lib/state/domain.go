@@ -1440,11 +1440,12 @@ func buildIndexFilterThenOpen(ctx context.Context, d *compress.Decompressor, com
 }
 
 func buildIndex(ctx context.Context, d *compress.Decompressor, compressed FileCompression, idxPath, tmpdir string, values bool, salt *uint32, ps *background.ProgressSet, logger log.Logger, noFsync bool) error {
+	_, fileName := filepath.Split(idxPath)
 	count := d.Count()
 	if !values {
 		count = d.Count() / 2
 	}
-	p := ps.AddNew(filepath.Base(idxPath), uint64(count))
+	p := ps.AddNew(fileName, uint64(count))
 	defer ps.Delete(p)
 
 	defer d.EnableReadAhead().DisableReadAhead()
@@ -1452,7 +1453,7 @@ func buildIndex(ctx context.Context, d *compress.Decompressor, compressed FileCo
 	var ij, retry uint64
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Printf("buildIndex: %s %v ij %d KCount %d retries %d\n", idxPath, err, ij, count, retry)
+			fmt.Printf("buildIndex: %s %v ij %d KCount %d retries %d size %d dcount %d\n", fileName, err, ij, count, retry, d.Size(), d.Count())
 		}
 	}()
 
