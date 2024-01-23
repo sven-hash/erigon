@@ -22,6 +22,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"github.com/c2h5oh/datasize"
 	"hash"
 	"math"
 	"os"
@@ -1453,7 +1454,7 @@ func buildIndex(ctx context.Context, d *compress.Decompressor, compressed FileCo
 	var ij, retry uint64
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Printf("buildIndex: %s %v ij %d KCount %d retries %d size %d dcount %d\n", fileName, err, ij, count, retry, d.Size(), d.Count())
+			fmt.Printf("buildIndex: %s (of %v) ij %d KCount %d retries %d size %v dcount %d\n", fileName, d.FileName(), ij, count, retry, datasize.ByteSize(d.Size()).String(), d.Count())
 		}
 	}()
 

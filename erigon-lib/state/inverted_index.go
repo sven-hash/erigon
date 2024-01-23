@@ -429,7 +429,8 @@ func buildIdxFilter(ctx context.Context, d *compress.Decompressor, compressed Fi
 	var ij uint64
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Printf("buildIndexFilter: %s %v count %d ij %d\n", filepath.Base(idxPath), err, count, ij)
+			_ = err
+			fmt.Printf("buildIndexFilter: %s (of %s) count %d ij %d\n", filepath.Base(idxPath), d.FileName(), count, ij)
 		}
 	}()
 	idxFilter, err := NewExistenceFilter(uint64(count), idxPath)
