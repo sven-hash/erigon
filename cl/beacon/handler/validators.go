@@ -655,7 +655,8 @@ func shouldStatusBeFiltered(status validatorStatus, statuses []validatorStatus) 
 
 func (a *ApiHandler) postBeaconCommitteeSubscriptions(w http.ResponseWriter, r *http.Request) {
 	req := []*cltypes.BeaconCommitteeSubscription{}
-	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Error("failed to decode request", "err", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -664,7 +665,12 @@ func (a *ApiHandler) postBeaconCommitteeSubscriptions(w http.ResponseWriter, r *
 		return
 	}
 	for _, sub := range req {
-
+		if err := a.attestation.AddAttestationSubscription(sub); err != nil {
+			log.Error("failed to add attestation subscription", "err", err)
+			// todo: more specific error
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	/*if err := a.forkchoiceStore.OnValidatorCommitteeSubscriptions(req); err != nil {
