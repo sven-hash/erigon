@@ -18,6 +18,8 @@ const (
 	TopicNameLightClientOptimisticUpdate = "light_client_optimistic_update"
 
 	TopicNamePrefixBlobSidecar = "blob_sidecar_%d" // {id} is a placeholder for the blob id
+
+	TopicNameBeaconAttestation = "beacon_attestation_%d" // placeholder for the subnets
 )
 
 func TopicNameBlobSidecar(d int) string {
@@ -26,4 +28,12 @@ func TopicNameBlobSidecar(d int) string {
 
 func IsTopicBlobSidecar(d string) bool {
 	return strings.Contains(d, "blob_sidecar_")
+}
+
+func TopicNameBeaconAttestationBySubnet(d int) string {
+	return fmt.Sprintf(TopicNameBeaconAttestation, d)
+}
+
+func IsTopicBeaconAttestation(d string) bool {
+	return strings.HasPrefix(d, "beacon_attestation_")
 }
